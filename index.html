@@ -2,19 +2,20 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Cadastro de Produtos</title>
+  <title>Cadastro de Produtos — Seguro</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
   <h1>Cadastro de Produtos</h1>
 
-
-  <form id="produtoForm">
+  <form id="produtoForm" novalidate>
     <input type="text" id="nome" placeholder="Nome" required>
-    <input type="number" id="preco" placeholder="Preço" required>
-    <input type="number" id="quantidade" placeholder="Quantidade" required>
-    <button type="submit">Adicionar</button>
+    <input type="number" id="preco" placeholder="Preço" step="0.01" required>
+    <input type="number" id="quantidade" placeholder="Quantidade" step="1" required>
+    <button type="submit" id="btnEnviar">Adicionar</button>
   </form>
+
+  <div id="mensagem" aria-live="polite" style="margin-bottom: 12px;"></div>
 
   <table>
     <thead>
@@ -30,22 +31,103 @@
 
   <script>
     const API_URL = "http://localhost:3000/produtos"
+    const tabelaCorpo = document.getElementById("tabelaCorpo")
+    const mensagem = document.getElementById("mensagem")
+    const btnEnviar = document.getElementById("btnEnviar")
 
-async function carregarProdutos() {
-      const resp = await fetch(API_URL)
-      const produtos = await resp.json()
-      const corpo = document.getElementById("tabelaCorpo")
-      corpo.innerHTML = ""
-      produtos.forEach(p => {
-        const row = document.createElement("tr")
-        row.innerHTML = `
-          <td>${p.nome}</td>
-          <td>R$ ${Number(p.preco).toFixed(2)}</td>
-          <td>${p.quantidade}</td>
-        `
-        corpo.appendChild(row)
-      })
+    function mostrarMensagem(text, tipo = "info") {
+      mensagem.textContent = text
+      mensagem.style.color = tipo === "erro" ? "crimson" : "#2c3e50"
     }
+
+ 
+    function criarLinha(prod) {
+      const tr = document.createElement("tr")
+
+      const tdNome = document.createElement("td")
+      tdNome.textContent = prod.nome ?? ""
+      tr.appendChild(tdNome)
+
+      const tdPreco = document.createElement("td")
+
+      const precoNum = Number(prod.preco)
+      tdPreco.textContent = Number.isFinite(precoNum) ? `R$ ${precoNum.toFixed(2)}` : "R$ 0,00"
+      tr.appendChild(tdPreco)
+
+      const tdQuantidade = document.createElement("td")
+      tdQuantidade.textContent = String(prod.quantidade ?? "")
+      tr.appendChild(tdQuantidade)
+
+      return tr
+    }
+
+
+    async function carregarProdutos() {
+      try {
+        mostrarMensagem("Carregando produtos...")
+        const resp = await fetch(API_URL)
+        if (!resp.ok) throw new Error(`Erro HTTP ${resp.status}`)
+        const produtos = await resp.json()
+        tabelaCorpo.innerHTML = "" r createElement
+        produtos.forEach(p => tabelaCorpo.appendChild(criarLinha(p)))
+        mostrarMensagem(`Carregados ${produtos.length} produto(s).`)
+      } catch (err) {
+        mostrarMensagem("Falha ao carregar produtos: " + err.message, "erro")
+        console.error(err)
+      }
+    }
+
+
+    document.getElementById("produtoForm").addEventListener("submit", async (e) => {
+      e.preventDefault()
+      const nome = document.getElementById("nome").value.trim()
+      const preco = parseFloat(document.getElementById("preco").value)
+      const quantidade = parseInt(document.getElementById("quantidade").value, 10)
+
+      if (!nome) {
+        mostrarMensagem("O campo nome é obrigatório.", "erro")
+        return
+      }
+      if (!Number.isFinite(preco) || preco < 0) {
+        mostrarMensagem("Preço inválido. Informe um número >= 0.", "erro")
+        return
+      }
+      if (!Number.isInteger(quantidade) || quantidade < 0) {
+        mostrarMensagem("Quantidade inválida. Informe um inteiro >= 0.", "erro")
+        return
+      }
+
+
+      const payload = { nome, preco, quantidade }
+
+
+      btnEnviar.disabled = true
+      mostrarMensagem("Enviando...")
+
+      try {
+        const resp = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+        if (!resp.ok) {
+          const errJson = await resp.json().catch(()=>null)
+          throw new Error(errJson?.erro ?? `Erro HTTP ${resp.status}`)
+        }
+
+        await carregarProdutos()
+        mostrarMensagem("Produto adicionado com sucesso.")
+        e.target.reset()
+      } catch (err) {
+        mostrarMensagem("Falha ao salvar: " + err.message, "erro")
+        console.error(err)
+      } finally {
+        btnEnviar.disabled = false
+      }
+    })
+
+
+    carregarProdutos()
   </script>
 </body>
 </html>
