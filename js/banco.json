@@ -1,0 +1,17 @@
+[
+    {
+"nome":"leite",
+"preco":4.50,
+"quantidade": 200
+    },{
+"nome":"carne",
+"preco":25.00,  
+"quantidade": 150
+    },{
+"nome":"queijo",
+"preco":30.00,
+"quantidade": 100
+    }
+
+]
+    
